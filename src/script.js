@@ -38,6 +38,7 @@ class Todo {
       searchQuery: '',
     }
     this.render();
+    this.bindEvents();
   }
 
   getItemsFromLocalStorage() {
@@ -137,6 +138,75 @@ class Todo {
     this.state.searchQuery = '';
 
     this.render();
+  }
+
+  onNewTaskFormSubmit = (event) => {
+    event.preventDefault();
+
+    const newTodoItemTitle = this.newTaskFormElement.value;
+
+    if (newTodoItemTitle.trim().length > 0) {
+      this.addItem(newTodoItemTitle);
+      this.resetFilter();
+      this.newTaskFormElement.value = ''
+
+      this.newTaskInputElement.focus();
+    }
+  }
+
+  onSearchTaskFormSubmit = (event) => {
+    event.preventDefault();
+  }
+
+  onSearchTaskInputChange = (target) => {
+    const value = target.value.trim().toLowerCase();
+
+    if (value.length > 0) {
+      this.state.searchQuery = value;
+      this.filter();
+    } else {
+      this.resetFilter();
+    }
+  }
+
+  onDeleteAllButtonClick = () => {
+    const isConfirmed = confirm('Are you sure you want to delete?');
+
+    if (isConfirmed) {
+      this.state.items = [];
+
+      this.saveItemsToLocalStorage()
+      this.render()
+    }
+  }
+
+  onClick = (target) => {
+    if(target.matches(this.selectors.items)) {
+      const itemElement = target.closest(this.selectors.items);
+      const itemCheckboxElement = itemElement.querySelector(this.selectors.itemCheckBox);
+
+      itemElement.classList.add(this.stateClasses.isDisappearing);
+
+      setTimeout(() => {
+        this.deleteItem(itemCheckboxElement.id);
+      }, 400)
+    }
+  }
+
+  onChange = (target) => {
+    if(target.matches(this.selectors.itemCheckBox)) {
+      this.toggleCheckedState(target.id);
+    }
+  }
+
+  bindEvents() {
+    this.newTaskFormElement.addEventListener('submit', this.onNewTaskFormSubmit);
+    this.searchTaskFormElement.addEventListener('submit', this.onSearchTaskFormSubmit);
+    this.searchTaskInputElement.addEventListener('input', this.onSearchTaskInputChange);
+    this.deleteAllButtonElement.addEventListener('click', this.onDeleteAllButtonClick);
+    this.listElement.addEventListener('click', this.onClick)
+    this.listElement.addEventListener('change', this.onChange)
+
   }
 }
 
