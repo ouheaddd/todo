@@ -5,11 +5,11 @@ class Todo {
     newTaskInput: '[data-js-todo-new-task-input]',
     searchTaskForm: '[data-js-todo-search-task-form]',
     searchTaskInput: '[data-js-todo-search-task-input]',
-    totalTasks: '[data-js-todo-total-tasks]',
+    totalTasks: '[data-js-todo-total-task]',
     deleteAllButton: '[data-js-todo-delete-all-button]',
     list: '[data-js-todo-list]',
     item: '[data-js-todo-item]',
-    itemCheckBox: '[data-js-todo-item-check-box]',
+    itemCheckBox: '[data-js-todo-item-checkbox]',
     itemLabel: '[data-js-todo-item-label]',
     itemDeleteButton: '[data-js-todo-delete-button]',
     emptyMessage: '[data-js-todo-empty-message]',
@@ -23,7 +23,7 @@ class Todo {
   localStorageKey = 'todo-items'
 
   constructor() {
-    this.rootElement = document.querySelector('this.selectors.root');
+    this.rootElement = document.querySelector(this.selectors.root);
     this.newTaskFormElement = this.rootElement.querySelector(this.selectors.newTaskForm);
     this.newTaskInputElement = this.rootElement.querySelector(this.selectors.newTaskInput);
     this.searchTaskFormElement = this.rootElement.querySelector(this.selectors.searchTaskForm);
@@ -32,34 +32,40 @@ class Todo {
     this.deleteAllButtonElement = this.rootElement.querySelector(this.selectors.deleteAllButton);
     this.listElement = this.rootElement.querySelector(this.selectors.list);
     this.emptyMessageElement = this.rootElement.querySelector(this.selectors.emptyMessage);
+
     this.state = {
       items: this.getItemsFromLocalStorage(),
       filteredItems: null,
       searchQuery: '',
     }
+
     this.render();
     this.bindEvents();
   }
 
   getItemsFromLocalStorage() {
-    const rawDara = localStorage.getItem(this.localStorageKey);
+    const rawData = localStorage.getItem(this.localStorageKey);
 
-    if(!rawDara) {
-      return[]
+    if (!rawData) {
+      return [];
     }
 
     try {
-      const parsedData = JSON.parse(rawDara);
+      const parsedData = JSON.parse(rawData);
 
       return Array.isArray(parsedData) ? parsedData : [];
     } catch {
-      console.error(`Error getting items from local storage`);
+      console.error('Error getting items from local storage');
       return [];
     }
   }
 
   saveItemsToLocalStorage() {
     localStorage.setItem(this.localStorageKey, JSON.stringify(this.state.items));
+  }
+
+  getVisibleItems() {
+    return this.state.filteredItems ?? this.state.items;
   }
 
   render() {
@@ -70,65 +76,79 @@ class Todo {
       this.state.items.length > 0
     );
 
-    const items = this.state.filteredItems ?? this.state.items;
+    const items = this.getVisibleItems();
 
-    this.listElement.innerHTML = items.map(({id, title, isChecked}) => `
-                <li class="todo__item todo-item" data-js-todo-item>
-                <input type="checkbox" class="todo-item__checkbox" id="${id}" ${isChecked ? 'checkes' : ''} data-js-todo-item-checkbox>
-                <label for="todo-1" class="todo-item__label" data-js-todo-item-label>${title}</label>
-                <button class="todo-item__delete-button" type="button" aria-label="Delete" title="Delete" data-js-todo-delete-button>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 5L5 15M5 5L15 15" stroke="#757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </li>
+    this.listElement.innerHTML = items.map(({ id, title, isChecked }) => `
+      <li class="todo__item todo-item" data-js-todo-item>
+        <input type="checkbox" class="todo-item__checkbox" id="${id}" ${isChecked ? 'checked' : ''} data-js-todo-item-checkbox>
+        <label for="${id}" class="todo-item__label" data-js-todo-item-label>${title}</label>
+        <button class="todo-item__delete-button" type="button" aria-label="Delete" title="Delete" data-js-todo-delete-button>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 5L5 15M5 5L15 15" stroke="#757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </li>
     `).join('');
 
-    const isEmptyFiltredItems = this.state.filteredItems?.length === 0;
+    const isEmptyFilteredItems = this.state.filteredItems?.length === 0;
     const isEmptyItems = this.state.items.length === 0;
 
-    this.emptyMessageElement.textContent = isEmptyFiltredItems ? 'No items found!' : isEmptyItems ? 'No items yet!' : '';
+    this.emptyMessageElement.textContent = isEmptyFilteredItems
+      ? 'No items found!'
+      : isEmptyItems
+        ? 'No items yet!'
+        : '';
   }
 
-  addItem(titel) {
+  addItem(title) {
     this.state.items.push({
       id: crypto?.randomUUID() ?? Date.now().toString(),
-      title: titel,
+      title,
       isChecked: false,
     });
 
-    this.saveItemsToLocalStorage()
-    this.render()
+    this.saveItemsToLocalStorage();
+    this.render();
   }
 
   deleteItem(id) {
-    this.state.items = this.state.filteredItems.filter((item) => item.id !== id);
+    this.state.items = this.state.items.filter((item) => item.id !== id);
 
-    this.saveItemsToLocalStorage()
-    this.render()
+    this.saveItemsToLocalStorage();
+
+    if (this.state.searchQuery.length > 0) {
+      this.filter();
+    } else {
+      this.render();
+    }
   }
 
-  toggleCheckedState() {
+  toggleCheckedState(id) {
     this.state.items = this.state.items.map((item) => {
-      if(item.id === id) {
-        return {...item, isChecked: !item.isChecked};
+      if (item.id === id) {
+        return { ...item, isChecked: !item.isChecked };
       }
 
       return item;
-    })
+    });
 
-    this.saveItemsToLocalStorage()
-    this.render()
+    this.saveItemsToLocalStorage();
+
+    if (this.state.searchQuery.length > 0) {
+      this.filter();
+    } else {
+      this.render();
+    }
   }
 
   filter() {
     const queryFormatted = this.state.searchQuery.toLowerCase();
 
-    this.state.filteredItems = this.state.items.filter((title) => {
+    this.state.filteredItems = this.state.items.filter(({ title }) => {
       const titleFormatted = title.toLowerCase();
 
       return titleFormatted.includes(queryFormatted);
-    })
+    });
 
     this.render();
   }
@@ -136,6 +156,7 @@ class Todo {
   resetFilter() {
     this.state.filteredItems = null;
     this.state.searchQuery = '';
+    this.searchTaskInputElement.value = '';
 
     this.render();
   }
@@ -143,13 +164,12 @@ class Todo {
   onNewTaskFormSubmit = (event) => {
     event.preventDefault();
 
-    const newTodoItemTitle = this.newTaskFormElement.value;
+    const newTodoItemTitle = this.newTaskInputElement.value.trim();
 
-    if (newTodoItemTitle.trim().length > 0) {
+    if (newTodoItemTitle.length > 0) {
       this.addItem(newTodoItemTitle);
       this.resetFilter();
-      this.newTaskFormElement.value = ''
-
+      this.newTaskInputElement.value = '';
       this.newTaskInputElement.focus();
     }
   }
@@ -158,8 +178,8 @@ class Todo {
     event.preventDefault();
   }
 
-  onSearchTaskInputChange = (target) => {
-    const value = target.value.trim().toLowerCase();
+  onSearchTaskInputChange = (event) => {
+    const value = event.target.value.trim();
 
     if (value.length > 0) {
       this.state.searchQuery = value;
@@ -174,28 +194,29 @@ class Todo {
 
     if (isConfirmed) {
       this.state.items = [];
-
-      this.saveItemsToLocalStorage()
-      this.render()
+      this.saveItemsToLocalStorage();
+      this.resetFilter();
     }
   }
 
-  onClick = (target) => {
-    if(target.matches(this.selectors.items)) {
-      const itemElement = target.closest(this.selectors.items);
+  onClick = (event) => {
+    const deleteButtonElement = event.target.closest(this.selectors.itemDeleteButton);
+
+    if (deleteButtonElement) {
+      const itemElement = deleteButtonElement.closest(this.selectors.item);
       const itemCheckboxElement = itemElement.querySelector(this.selectors.itemCheckBox);
 
       itemElement.classList.add(this.stateClasses.isDisappearing);
 
       setTimeout(() => {
         this.deleteItem(itemCheckboxElement.id);
-      }, 400)
+      }, 400);
     }
   }
 
-  onChange = (target) => {
-    if(target.matches(this.selectors.itemCheckBox)) {
-      this.toggleCheckedState(target.id);
+  onChange = (event) => {
+    if (event.target.matches(this.selectors.itemCheckBox)) {
+      this.toggleCheckedState(event.target.id);
     }
   }
 
@@ -204,10 +225,9 @@ class Todo {
     this.searchTaskFormElement.addEventListener('submit', this.onSearchTaskFormSubmit);
     this.searchTaskInputElement.addEventListener('input', this.onSearchTaskInputChange);
     this.deleteAllButtonElement.addEventListener('click', this.onDeleteAllButtonClick);
-    this.listElement.addEventListener('click', this.onClick)
-    this.listElement.addEventListener('change', this.onChange)
-
+    this.listElement.addEventListener('click', this.onClick);
+    this.listElement.addEventListener('change', this.onChange);
   }
 }
 
-new Todo()
+new Todo();
